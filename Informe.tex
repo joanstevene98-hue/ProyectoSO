@@ -1,0 +1,120 @@
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{xfrac}
+\usepackage{tipa}
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
+    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+\begin{document}
+
+\title{Mini-Kernel: Informe del Proyecto\
+}
+
+\author{\IEEEauthorblockN{Autor 1}
+\IEEEauthorblockA{Ingeniería de Sistemas \\
+Universidad Distrital \\
+Bogotá, Colombia}
+\and
+\IEEEauthorblockN{Autor 2}
+\IEEEauthorblockA{Ingeniería de Sistemas \\
+Universidad Distrital \\
+Bogotá, Colombia}
+\and
+\IEEEauthorblockN{Autor 3}
+\IEEEauthorblockA{Ingeniería de Sistemas \\
+Universidad Distrital \\
+Bogotá, Colombia}
+}
+
+\maketitle
+
+\begin{abstract}
+\noindent Este informe documenta el desarrollo del simulador "Mini-Kernel" implementado como proyecto final. Se describen la arquitectura adoptada, los algoritmos implementados (planificación, gestión de memoria, sistema de archivos y E/S), las estructuras de datos principales, la organización del código y la estrategia de pruebas. Además se indican las instrucciones generales para ejecutar los tests incluidos en el repositorio.
+\end{abstract}
+
+\begin{IEEEkeywords}
+Mini-kernel, simulador, Round Robin, First Fit, sistema de archivos, E/S, arquitectura hexagonal
+\end{IEEEkeywords}
+
+\section{Introducción}
+\IEEEPARstart{E}{n} este proyecto se implementó un simulador de mini-kernel cuyo propósito es permitir experimentar con conceptos fundamentales de sistemas operativos: planificación de procesos, asignación de memoria, gestión de archivos y manejo de E/S. El código está organizado siguiendo la arquitectura hexagonal (Ports and Adapters) para separar el dominio de las implementaciones concretas y facilitar pruebas e intercambiabilidad de adaptadores.
+
+\section{Arquitectura del proyecto}
+El proyecto adopta la arquitectura hexagonal: existe un núcleo de dominio que define entidades y puertos (interfaces) y adaptadores que implementan esos puertos. La estructura del repositorio refleja esta separación en la carpeta \texttt{cpp\_os\_simulator/src} con subcarpetas \texttt{domain}, \texttt{application} y \texttt{adapters} (inbound/outbound).
+
+Principales ventajas: desacoplamiento entre lógica y IO, facilidad para pruebas unitarias y posibilidad de reemplazar adaptadores (por ejemplo, distintos algoritmos de planificación) sin tocar el dominio.
+
+\section{Algoritmos implementados}
+Se implementaron los siguientes algoritmos, uno por cada subsistema principal:
+\begin{itemize}
+  \item \textbf{Planificación de procesos:} Round Robin (colade listos y quantum configurado). Implementado en \texttt{src/adapters/outbound/schedulers/rr\_scheduler.cpp}.
+  \item \textbf{Gestión de memoria:} First Fit (asignación contigua en memoria principal). Implementado en \texttt{src/adapters/outbound/memory/first\_fit\_memory.cpp}.
+  \item \textbf{Sistema de archivos:} Asignación contigua (FCB y bloques contiguos). Implementado en \texttt{src/adapters/outbound/fs/in\_memory\_filesystem.cpp}.
+  \item \textbf{Gestión de E/S:} Colas FIFO por dispositivo y simulador de dispositivo. Implementado en \texttt{src/adapters/outbound/devices/device\_sim.cpp}.
+\end{itemize}
+
+\section{Estructuras de datos principales}
+El proyecto modela las entidades clásicas de un mini-kernel. A continuación se listan las estructuras principales y su correspondencia con los ficheros del código:
+\begin{itemize}
+  \item \textbf{PCB (Process Control Block)}: \texttt{src/domain/entities/pcb.h, pcb.cpp} — campos: \texttt{pid}, nombre, tiempos de rafaga, estado, tiempo restante.
+  \item \textbf{MemoryBlock / MemoryMap}: representados en \texttt{src/domain/entities/memory/block.h} y la implementación en \texttt{first\_fit\_memory.cpp} — campos: inicio, tamaño, libre, pid.
+  \item \textbf{FCB y bloques de FS}: implementados en \texttt{src/adapters/outbound/fs/in\_memory\_filesystem.*} — campos: nombre, tamaño, bloque inicial.
+  \item \textbf{Colas de E/S y DeviceTable}: en \texttt{src/adapters/outbound/devices/device\_sim.*}.
+\end{itemize}
+
+\section{Organización del código y ejecutables}
+El sistema está organizado en \texttt{cpp\_os\_simulator/CMakeLists.txt} que define varios ejecutables de interés:
+\begin{itemize}
+  \item \texttt{os\_simulator\_kernel} — runner principal del kernel.
+  \item \texttt{os\_simulator\_scheduler} — ejecutable orientado a pruebas del planificador.
+  \item \texttt{os\_simulator\_memory} — demostración del módulo de memoria.
+  \item \texttt{os\_simulator\_files} — demostración del módulo de archivos.
+\end{itemize}
+
+\section{Pruebas}
+Se incluyen pruebas unitarias y de integración en la carpeta \texttt{cpp\_os\_simulator/tests}. Los tests están construidos como ejecutables y registrados en CMake para ser ejecutados con CTest.
+
+Tests disponibles (archivos):
+\begin{itemize}
+  \item \texttt{tests/domain/test\_pcb.cpp}  — pruebas de la entidad PCB.
+  \item \texttt{tests/adapters/test\_first\_fit\_memory.cpp} — pruebas del adaptador de memoria.
+  \item \texttt{tests/adapters/test\_in\_memory\_filesystem.cpp} — pruebas del sistema de archivos.
+  \item \texttt{tests/adapters/test\_schedulers.cpp} — pruebas de los planificadores FIFO/RR.
+  \item \texttt{tests/application/test\_integration\_scenarios.cpp} — escenarios de integración (CPU+memoria, I/O concurrente, integración completa).
+\end{itemize}
+
+Ejecución de tests (resumen):
+\begin{enumerate}
+  \item Generar y compilar el build con CMake (ver CMakeLists.txt).
+  \item Desde la carpeta \texttt{cpp\_os\_simulator/build} ejecutar:\\
+  \texttt{ctest -C Release --output-on-failure} para ejecutar todos los tests.
+  \item También se pueden ejecutar los ejecutables de test directamente (p. ej. \texttt{test\_memory.exe}) para ver las salidas por consola.
+\end{enumerate}
+
+Nota: los tests usan \texttt{assert} y escriben mensajes de verificación mediante \texttt{std::cout}. En caso de fallo el proceso aborta y CTest reporta la falla.
+
+\section{Resultados esperados}
+El diseño y la instrumentación permiten observar los siguientes comportamientos durante la ejecución y pruebas:
+\begin{itemize}
+  \item El planificador Round Robin rota procesos según quantum configurado y muestra la transición de estados del PCB.
+  \item El adaptador First Fit asigna bloques contiguos y genera huecos (fragmentación externa) al liberar memoria.
+  \item El sistema de archivos en memoria gestiona creación, apertura, cierre y eliminación de archivos mediante asignación contigua de bloques.
+  \item Las colas FIFO de los dispositivos procesan solicitudes en orden de llegada y simulan interrupciones que reactivan procesos.
+\end{itemize}
+
+\section{Conclusiones}
+El proyecto entrega un simulador didáctico del funcionamiento básico de un mini-kernel, con modularidad suficiente para experimentar con distintos algoritmos de planificación, asignación de memoria y políticas de E/S. La elección de la arquitectura hexagonal facilita la prueba y extensión de componentes. Las pruebas incluidas permiten verificar el comportamiento esperado de cada adaptador y los escenarios de integración.
+
+\begin{thebibliography}{00}
+\bibitem{b2} GeeksforGeeks (s.f.) “Round-Robin Scheduling in Operating System”, https://www.geeksforgeeks.org/operating-systems/round-robin-scheduling-in-operating-system/
+\bibitem{b3} GeeksforGeeks (s.f.) “First-Fit Allocation in Operating Systems”, https://www.geeksforgeeks.org/operating-systems/first-fit-allocation-in-operating-systems/
+\bibitem{b4} takeUforward (s.f.). “Contiguous Allocation, Paging and Segmentation.” https://takeuforward.org/operating-system/contiguous-allocation-paging-segmentation
+\bibitem{b5} GeeksforGeeks (s.f.) “FIFO”, https://www.geeksforgeeks.org/dsa/introduction-to-queue-data-structure-and-algorithm-tutorials/
+\end{thebibliography}
+
+\end{document}

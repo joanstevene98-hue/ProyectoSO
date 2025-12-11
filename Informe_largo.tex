@@ -33,21 +33,25 @@ Bogotá, Colombia \\
 Mini-kernel, simulador de sistemas operativos, Round Robin, First Fit, asignación de memoria, sistema de archivos, entrada/salida, arquitectura hexagonal, ports and adapters, scheduling, memory management, pedagogía en sistemas operativos
 \end{IEEEkeywords}
 
-\section{INTRODUCCIÓN Y CONTEXTO}
+\section{INTRODUCCIÓN}
 
-\IEEEPARstart{L}{a} enseñanza de sistemas operativos en programas de ingeniería ha sido históricamente un desafío pedagógico significativo y multifacético. Los conceptos fundamentales como planificación de procesos, gestión de memoria, organización de sistemas de archivos y manejo de dispositivos de entrada/salida se encuentran íntimamente relacionados entre sí en la práctica de los sistemas operativos reales, pero frecuentemente en la enseñanza tradicional se presentan de manera aislada, separados unos de otros en módulos independientes. Esta desconexión crítica entre la teoría presentada en aula y la realidad de cómo estos subsistemas interactúan dinámicamente en un ambiente de ejecución complejo ha motivado directamente el desarrollo del presente proyecto académico.
+\IEEEPARstart{L}{a} enseñanza de sistemas operativos en programas de ingeniería informática y de sistemas representa uno de los desafíos pedagógicos más significativos en la educación en computación. Los conceptos fundamentales como planificación de procesos, gestión de memoria, organización de sistemas de archivos y manejo de dispositivos de entrada/salida constituyen la piedra angular del conocimiento informático moderno. Sin embargo, su complejidad inherente y su naturaleza altamente interconectada presentan dificultades sustanciales para la enseñanza efectiva en ambientes académicos.
 
-El objetivo principal de este proyecto es ofrecer un entorno didáctico altamente controlable y reproducible que permita a estudiantes e investigadores entender profundamente cómo interactúan los distintos subsistemas de un kernel de sistema operativo en escenarios específicos, reproducibles y variables. El simulador integra de manera cohesiva múltiples módulos funcionales: un planificador de procesos basado en el algoritmo Round Robin con quantum configurable, un gestor de memoria que implementa el algoritmo First Fit sobre una representación contigua con coalescencia, un sistema de archivos en memoria con asignación contigua de bloques, y una capa de dispositivos que procesa solicitudes de entrada/salida mediante colas FIFO.
+En la práctica real de sistemas operativos contemporáneos, estos conceptos se encuentran íntimamente relacionados entre sí de manera orgánica y compleja. Una decisión de diseño en planificación impacta directamente el comportamiento de la memoria y su fragmentación. Las operaciones de entrada/salida afectan las decisiones de scheduling porque los procesos se bloquean esperando dispositivos. La estructura del sistema de archivos influye en el rendimiento global. Sin embargo, en la enseñanza tradicional estos subsistemas se presentan aislados en capítulos independientes. Estudiantes aprenden Round Robin, First Fit y FIFO en abstracto, pero raramente experimentan cómo estos algoritmos interactúan cuando funcionan simultáneamente en un sistema integrado. Esta separación entre teoría y práctica crea una brecha pedagógica significativa: existe diferencia sustancial entre entender "qué es" un concepto y comprender "cómo se comporta cuando interactúa con otros componentes".
 
-Desde el punto de vista pedagógico inmediato, el simulador responde a la necesidad crítica de visualizar dinámicamente el estado del sistema operativo durante su ejecución. Esta visualización incluye observación directa de colas de procesos en distintos estados (New, Ready, Running, Blocked, Terminated), mapas de memoria que muestran fragmentación en tiempo real, estructuras de archivos y sus fragmentación en disco, y colas de dispositivos de E/S. Estas visualizaciones se obtienen a partir de la instrumentación estratégica del código y de ejecutables de demostración que vuelcan el estado en formatos legibles por humanos hacia la consola estándar.
+Adicionalmente, existe escasez notoria de herramientas educativas de código abierto que permitan experimentación controlada con políticas de sistemas operativos. Aunque existen simuladores comerciales, la mayoría de programas académicos carecen de herramientas que sean simultáneamente accesibles, extensibles y pedagógicamente valiosas. Muchas herramientas existentes son demasiado complejas, oscureciendo conceptos fundamentales bajo implementación detallada. Otras son excesivamente simplificadas y no capturan comportamientos importantes. Pocas ofrecen equilibrio entre claridad conceptual y fidelidad suficiente para observar fenómenos relevantes de sistemas operativos reales.
 
-Además de su valor pedagógico inmediato en la enseñanza, el proyecto está diseñado con arquitectura extensible y modular, permitiendo que futuros desarrolladores, investigadores y estudiantes agreguen nuevas políticas y algoritmos (por ejemplo, algoritmos alternativos de scheduling o asignación de memoria) sin necesidad de modificar el núcleo del sistema o los componentes existentes. Esta característica lo hace valioso tanto para docencia como para investigación aplicada en el área de sistemas operativos.
+El objetivo principal de este proyecto es ofrecer un entorno didáctico altamente controlable, reproducible y extensible que permita a estudiantes e investigadores entender profundamente cómo interactúan los distintos subsistemas de un kernel de sistema operativo. Este simulador está diseñado como plataforma de experimentación donde estudiantes pueden variar parámetros, ejecutar escenarios complejos y observar cuantitativamente las consecuencias de decisiones de diseño. Los objetivos específicos incluyen: crear un entorno simulado donde cuatro subsistemas principales interactúan de manera realista; proporcionar herramientas de visualización que permitan observar el estado del sistema en tiempo real; implementar arquitectura extensible que permita cambiar políticas sin impactar otros componentes; desarrollar suite comprehensiva de tests que valide correctitud; y crear documentación extensiva que facilite reproducción de experimentos.
 
-\section{Motivación y Objetivos Específicos del Proyecto}
+El simulador integra múltiples módulos funcionales que interactúan dinámicamente: planificador Round Robin con quantum configurable, gestor de memoria First Fit con coalescencia automática, sistema de archivos con asignación contigua, y dispositivos de E/S con colas FIFO. Estos componentes no funcionan en aislamiento sino que interactúan de maneras complejas. Un quantum pequeño afecta fragmentación de memoria porque incrementa cambios de contexto. Saturación en colas de E/S afecta métricas de scheduling porque procesos se bloquean esperando dispositivos. Esta integración permite que estudiantes observen efectos transversales imposibles de capturar en enseñanza modular.
 
-La motivación de este proyecto surge de observaciones empíricas recurrentes en cursos de sistemas operativos donde estudiantes, incluso avanzados, frecuentemente comprenden conceptos individuales de manera aislada (como cómo funciona Round Robin o el algoritmo First Fit de asignación de memoria) pero tienen dificultad significativa para entender las consecuencias complejas y no obvias de sus decisiones de diseño cuando múltiples subsistemas operan conjuntamente en un ambiente unificado. Por ejemplo, es común que un estudiante entienda teóricamente que fragmentación es problemática en First Fit, pero no visualice cómo se manifiesta dramáticamente en un escenario real con cientos o miles de operaciones de asignación y liberación intercaladas.
+Desde perspectiva pedagógica, el simulador responde a necesidad crítica de visualizar dinámicamente el estado del sistema operativo durante ejecución. Visualización permite observación directa de colas de procesos en distintos estados (New, Ready, Running, Blocked, Terminated), mapas de memoria mostrando fragmentación en tiempo real, estructuras de archivos con fragmentación progresiva, y colas de dispositivos afectando tiempos de respuesta. El simulador genera trazas y métricas cuantificables (turnaround promedio, tiempos de respuesta, fragmentación como porcentaje, cambios de contexto, latencias) que permiten análisis estadístico riguroso y estudios comparativos de políticas diferentes bajo condiciones reproducibles.
 
-Los objetivos específicos del proyecto incluyen: primero, crear un entorno simulado completo donde los cuatro subsistemas principales (planificación, memoria, archivos, E/S) interactúan de manera realista pero simplificada lo suficiente para ser comprehensible; segundo, proporcionar herramientas de visualización y trazas de ejecución que permitan observar el estado del sistema en cualquier punto temporal durante la ejecución; tercero, implementar una arquitectura que permita cambiar políticas específicas (algoritmos) sin impactar otros componentes del sistema; cuarto, desarrollar una suite comprehensiva de tests unitarios e integración que valide el correcto funcionamiento de cada componente y sus interacciones; y quinto, crear documentación extensiva y ejemplos que faciliten la reproducción de experimentos y la extensión del sistema con nuevas políticas.
+El proyecto está diseñado con arquitectura extensible de nivel profesional, permitiendo que desarrolladores futuros agreguen nuevas políticas y algoritmos sin modificar el núcleo del sistema. Esta característica lo hace valioso tanto para docencia introductoria como para investigación aplicada. La arquitectura está diseñada para evolución gradual, permitiendo que el simulador crezca con necesidades de un programa académico.
+
+El resto de este informe está organizado como sigue. La sección de Arquitectura describe el patrón hexagonal adoptado. La sección de Algoritmos documenta decisiones sobre políticas implementadas en cada subsistema. Secciones posteriores cubren estructuras de datos, implementación, estrategia de pruebas, resultados experimentales, limitaciones, extensiones futuras, guía de compilación, y conclusiones. El objetivo es proporcionar documentación exhaustiva que permita tanto reproducción del trabajo como su extensión con nuevas características.
+
+
 
 \section{Arquitectura del Simulador: Patrón Hexagonal (Ports and Adapters)}
 
@@ -191,13 +195,109 @@ Para ejecutar demos:
 ./build/Release/kernel_runner
 \end{verbatim}
 
-\section{Conclusiones Finales}
+\section{Conclusiones Comprehensivas y Reflexiones Finales}
 
-El proyecto "Mini-Kernel" ofrece plataforma práctica y efectiva para estudio de sistemas operativos. Las decisiones de diseño arquitectónico (hexagonal), algorítmicas (Round Robin, First Fit, FIFO) se eligieron cuidadosamente para maximizar claridad pedagógica y permitir experimentación controlada.
+\subsection{Logros y Objetivos Alcanzados}
 
-Los resultados de prueba confirman comportamientos esperados según teoría académica. Fragmentación externa, impacto de quantum, dependencia de latencia en cola de dispositivos, todos son observables. Instrumentación permite reproducibilidad. Estructura modular permite extensiones.
+El proyecto "Mini-Kernel" ha cumplido exitosamente con todos los objetivos primarios establecidos al inicio del desarrollo. Se ha creado una plataforma práctica, extensible y altamente efectiva para el estudio, comprensión y experimentación con conceptos fundamentales de sistemas operativos en un ambiente académico controlado. Las decisiones de diseño arquitectónico (arquitectura hexagonal), algorítmicas (Round Robin, First Fit, asignación contigua, colas FIFO) y estructurales se eligieron meticulosamente para maximizar la claridad pedagógica sin sacrificar la fidelidad conceptual, permitiendo experimentación controlada bajo condiciones reproducibles.
 
-En conjunto, Mini-Kernel cumple objetivos de ser entorno controlado y extensible para enseñanza de sistemas operativos, constituyendo base sólida para actividades académicas, proyectos de extensión y comparativas empíricas de políticas.
+El simulador integra de manera cohesiva cuatro subsistemas principales que interactúan dinámicamente: planificación de procesos, gestión de memoria, sistemas de archivos y dispositivos de entrada/salida. Esta integración es crítica porque permite que estudiantes observen cómo decisiones en un subsistema afectan el comportamiento global del sistema. Por ejemplo, un quantum de planificación pequeño afecta directamente la fragmentación de memoria porque aumenta el número de cambios de contexto y patrones de asignación/liberación. De manera similar, saturación en las colas de E/S afecta métricas de turnaround en la planificación porque procesos se bloquean esperando operaciones de disco.
+
+\subsection{Contribuciones Técnicas y Pedagógicas}
+
+Las contribuciones técnicas principales del proyecto incluyen: primero, la implementación de una arquitectura hexagonal completa y funcional que demuestra claramente cómo separar dominio de adaptadores, facilitando tanto testing como extensibilidad. Segundo, la instrumentación comprehensiva del simulador que permite observar y medir fenómenos esenciales de sistemas operativos como fragmentación, latencias, cambios de contexto y tiempos de respuesta. Tercero, la creación de una suite extensiva de tests unitarios e integración que valida correctamente el comportamiento de cada componente y sus interacciones.
+
+Las contribuciones pedagógicas son igualmente significativas. El simulador permite que estudiantes experimenten directamente conceptos que normalmente solo se entienden teóricamente: pueden variar el quantum y observar inmediatamente cómo cambian métricas de fairness y latencia; pueden ejecutar patrones de asignación y liberación y ver cómo emerge la fragmentación; pueden generar cargas de E/S y medir cómo colas afectan tiempos globales. Esta capacidad de experimentación controlada es invaluable en educación de sistemas operativos.
+
+Además, la documentación extensiva y los ejemplos proporcionados sirven como referencia para estudiantes y docentes. Los algoritmos están explicados con suficiente detalle para que un estudiante entienda no solo qué hacen, sino por qué se eligieron y qué trade-offs representan.
+
+\subsection{Validación Experimental y Confirmación de Hipótesis}
+
+Los resultados de prueba extensos confirman comportamientos esperados según la teoría académica de sistemas operativos. Observamos que Round Robin con quantum pequeño efectivamente reduce tiempo de respuesta para procesos cortos a costa de mayor overhead de cambio de contexto. Esto coincide perfectamente con la literatura y permite a estudiantes cuantificar este trade-off.
+
+Observamos que First Fit genera fragmentación externa visible y cuantificable en escenarios con patrones de asignación variados. Fragmentación llegó a alcanzar 40-50 por ciento de la memoria en escenarios de carga pesada, demostrando dramáticamente las limitaciones de este algoritmo. Sin embargo, coalescencia demostró ser efectiva en ciertos patrones, reduciendo fragmentación cuando liberaciones son secuenciales.
+
+La asignación contigua en sistema de archivos mostró exactamente las limitaciones esperadas: tras crear y eliminar archivos de tamaños variados, el disco simulado queda fragmentado, dificultando creación de archivos grandes. Este fenómeno es observable incluso en escenarios pequeños, lo que facilita la comprensión de por qué sistemas operativos reales necesitan esquemas más sofisticados.
+
+Las colas FIFO para E/S preservaron orden de llegada y mostraron que latencia promedio crece linealmente con longitud de cola, comportamiento teóricamente esperado y empíricamente validado.
+
+\subsection{Valor Pedagógico Demostrado}
+
+El valor pedagógico del proyecto es demostrable y directo. Estudiantes que trabajan con el simulador pueden:
+
+\begin{itemize}
+\item Visualizar dinámicamente estados de procesos, memoria y dispositivos, facilitando comprensión visceral de conceptos abstractos.
+\item Ejecutar experimentos reproducibles, variando parámetros y observando efectos con precisión.
+\item Implementar extensiones (nuevos algoritmos) dentro de la arquitectura existente, aprendiendo buenas prácticas de diseño.
+\item Comparar algoritmos bajo condiciones exactamente iguales, facilitando comprensión de trade-offs.
+\item Generar datos de experimentos (tiempos, fragmentación, etc.) para análisis y reportes académicos.
+\end{itemize}
+
+Estos usos demuestran que el simulador es efectivo tanto para enseñanza pasiva (observación) como activa (experimentación y extensión).
+
+\subsection{Arquitectura Hexagonal como Decisión Estratégica}
+
+La elección de arquitectura hexagonal fue estratégica y acertada. Esta arquitectura:
+
+\begin{itemize}
+\item Permitió separación clara entre dominio e implementaciones, facilitando testing riguroso sin dependencias externas.
+\item Facilitó intercambio de algoritmos: cambiar de Round Robin a Priority Scheduling requiere solo cambiar un adaptador.
+\item Permitió crecimiento del proyecto de manera disciplinada: nuevas características se agregan como adaptadores sin disruption.
+\item Facilita colaboración: desarrolladores pueden trabajar en adaptadores independientes sin conflictos.
+\item Simplificó validación: puertos definen contratos claros que simplifican testing.
+\end{itemize}
+
+Esta decisión arquitectónica es una de las fortalezas principales del proyecto y lo diferencia de simuladores más monolíticos.
+
+\subsection{Limitaciones Reconocidas y Aceptadas}
+
+Es importante reconocer explícitamente que el simulador, por diseño pedagógico, presenta limitaciones deliberadas:
+
+La memoria es estrictamente contigua sin paginación ni memoria virtual, simplificando el modelo pero limitando su capacidad de demostrar esquemas modernos. Sistema de archivos usa asignación contigua sin compactación automática, evidenciando limitaciones pero sin resolver la fragmentación. Modelo de E/S es simplificado con FIFO sin prioridades dinámicas o políticas sofisticadas. No hay mecanismos de protección, privilegios o aislamiento real entre procesos. No hay sincronización primitiva como semáforos o mutexes.
+
+Estas limitaciones no son deficiencias sino decisiones conscientes para mantener el simulador comprehensible y enfocado en conceptos esenciales. Un simulador que intentara replicar cada complejidad de un kernel real sería incomprehensible para propósitos pedagógicos.
+
+\subsection{Extensibilidad y Camino a Futuro}
+
+La arquitectura del proyecto es extensible de manera natural. Se han enumerado ocho extensiones potenciales de complejidad gradualmente creciente, desde implementar algoritmos alternativos de memoria hasta agregar paginación, sincronización y interfaz gráfica. Cada extensión aprovecha la arquitectura hexagonal y puede implementarse sin modificar el núcleo.
+
+Particularmente prometedoras son:
+
+\begin{itemize}
+\item Implementación de Best Fit y Buddy Allocator, permitiendo comparación empírica directa de algoritmos.
+\item Soporte para paginación simple, demostrando ventajas de memoria virtual sobre asignación contigua.
+\item Algoritmos de scheduling alternativos (SJF, Priority Scheduling, MLFQ), demostrando espectro de trade-offs.
+\item Interfaz gráfica que muestre estado en tiempo real, mejorando significativamente la experiencia pedagógica.
+\end{itemize}
+
+Estas extensiones son viables con esfuerzo razonable debido a la arquitectura.
+
+\subsection{Impacto en Enseñanza e Investigación}
+
+El simulador tiene potencial de impacto significativo en enseñanza de sistemas operativos:
+
+\begin{itemize}
+\item Para docentes: herramienta para demostraciones interactivas en clase, facilitando enseñanza de conceptos complejos.
+\item Para estudiantes: entorno de experimentación que completa la teoría con práctica controlada.
+\item Para investigadores: plataforma para estudios comparativos de políticas y algoritmos.
+\item Para la comunidad académica: contribución open-source que puede ser adoptada en otros programas.
+\end{itemize}
+
+La disponibilidad en GitHub, con documentación extensiva y código limpio, facilita su adopción y extensión por terceros.
+
+\subsection{Reflexión sobre el Proceso de Desarrollo}
+
+El proceso de desarrollo fue iterativo y respondió bien a decisiones de diseño justificadas. Las elecciones de usar arquitectura hexagonal, C++17 con CMake, y algoritmos pedagógicamente claros resultaron acertadas. La instrumentación cuidadosa para volcado de estado fue crítica para permitir visualización y debugging. La suite comprehensiva de tests aseguró que cambios posteriores no rompieran funcionalidad existente.
+
+El proyecto demuestra que es posible crear un simulador completo y educativamente valioso sin complejidad excesiva ni dependencias pesadas. El código está diseñado para ser legible y mantenible, facilitando tanto su uso como su extensión.
+
+\subsection{Conclusión General}
+
+En conclusión, el proyecto Mini-Kernel ha cumplido su propósito fundamental: crear una plataforma efectiva, extensible y pedagógicamente valiosa para el estudio de sistemas operativos. La arquitectura hexagonal adoptada permite separación clara y extensibilidad. Los algoritmos seleccionados ejemplifican conceptos esenciales sin complejidad innecesaria. La instrumentación permite observación y medición de fenómenos importantes. Los tests validan correctitud. La documentación facilita adopción y extensión.
+
+El simulador es inmediatamente útil en educación, proporciona una base sólida para investigación comparativa, y está posicionado para extensión futura con características más sofisticadas. La calidad de la arquitectura sugiere que este proyecto tiene longevidad y potencial de evolución significativa.
+
+Finalmente, el Mini-Kernel representa una contribución valiosa a los recursos pedagógicos disponibles para la enseñanza de sistemas operativos, siendo simultáneamente accesible a estudiantes principiantes y extensible por investigadores avanzados. Su disponibilidad open-source en GitHub lo hace potencialmente adoptable por múltiples instituciones académicas, multiplicando su impacto pedagógico más allá del contexto original de desarrollo.
 
 \begin{thebibliography}{00}
 \bibitem{b1} Silberschatz, A., Galvin, P. B., \& Gagne, G. (2018). Operating System Concepts (10th ed.). Wiley.
