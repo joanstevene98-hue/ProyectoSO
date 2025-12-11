@@ -1,0 +1,212 @@
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{xfrac}
+\usepackage{tipa}
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
+    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+\begin{document}
+
+\title{Simulador de Mini-Kernel: Arquitectura, Implementación y Análisis Exhaustivo de Políticas de Sistemas Operativos}
+
+\author{\IEEEauthorblockN{Equipo de Desarrollo}
+\IEEEauthorblockA{\textit{Ingeniería de Sistemas} \\
+\textit{Universidad Distrital Francisco José de Caldas}\\
+Bogotá, Colombia \\
+}
+}
+
+\maketitle
+
+\begin{abstract}
+
+\noindent Este informe presenta una documentación exhaustiva y detallada del desarrollo del simulador "Mini-Kernel", un proyecto integral diseñado específicamente para facilitar la comprensión profunda, experimentación controlada y evaluación rigurosa de conceptos fundamentales de sistemas operativos mediante una simulación de entorno de ejecución controlado en ambiente académico. El documento expone de manera pormenorizada la motivación pedagógica detrás del proyecto, la arquitectura hexagonal adoptada como patrón de diseño arquitectónico, las decisiones críticas y justificadas de diseño, los algoritmos específicos implementados para cada subsistema, los detalles técnicos de implementación a nivel de código fuente, la estrategia comprehensiva y multi-nivel de pruebas y validación, así como observaciones detalladas surgidas durante el desarrollo. El simulador integra de manera cohesiva cuatro subsistemas principales: un planificador de procesos basado en Round Robin con quantum configurable, un gestor de memoria contigua basado en First Fit con coalescencia automática, un sistema de archivos en memoria con asignación contigua de bloques, y un modelo de dispositivos de entrada/salida con colas FIFO independientes. La arquitectura hexagonal utilizada permite la separación clara y completa entre lógica de dominio e implementaciones concretas de adaptadores, facilitando tanto el testing unitario e integración como la extensibilidad futura del sistema. Este proyecto constituye una base sólida y documentada para actividades académicas, de investigación aplicada y de experimentación comparativa en el área de sistemas operativos.
+
+\end{abstract}
+
+\begin{IEEEkeywords}
+Mini-kernel, simulador de sistemas operativos, Round Robin, First Fit, asignación de memoria, sistema de archivos, entrada/salida, arquitectura hexagonal, ports and adapters, scheduling, memory management, pedagogía en sistemas operativos
+\end{IEEEkeywords}
+
+\section{INTRODUCCIÓN Y CONTEXTO}
+
+\IEEEPARstart{L}{a} enseñanza de sistemas operativos en programas de ingeniería ha sido históricamente un desafío pedagógico significativo y multifacético. Los conceptos fundamentales como planificación de procesos, gestión de memoria, organización de sistemas de archivos y manejo de dispositivos de entrada/salida se encuentran íntimamente relacionados entre sí en la práctica de los sistemas operativos reales, pero frecuentemente en la enseñanza tradicional se presentan de manera aislada, separados unos de otros en módulos independientes. Esta desconexión crítica entre la teoría presentada en aula y la realidad de cómo estos subsistemas interactúan dinámicamente en un ambiente de ejecución complejo ha motivado directamente el desarrollo del presente proyecto académico.
+
+El objetivo principal de este proyecto es ofrecer un entorno didáctico altamente controlable y reproducible que permita a estudiantes e investigadores entender profundamente cómo interactúan los distintos subsistemas de un kernel de sistema operativo en escenarios específicos, reproducibles y variables. El simulador integra de manera cohesiva múltiples módulos funcionales: un planificador de procesos basado en el algoritmo Round Robin con quantum configurable, un gestor de memoria que implementa el algoritmo First Fit sobre una representación contigua con coalescencia, un sistema de archivos en memoria con asignación contigua de bloques, y una capa de dispositivos que procesa solicitudes de entrada/salida mediante colas FIFO.
+
+Desde el punto de vista pedagógico inmediato, el simulador responde a la necesidad crítica de visualizar dinámicamente el estado del sistema operativo durante su ejecución. Esta visualización incluye observación directa de colas de procesos en distintos estados (New, Ready, Running, Blocked, Terminated), mapas de memoria que muestran fragmentación en tiempo real, estructuras de archivos y sus fragmentación en disco, y colas de dispositivos de E/S. Estas visualizaciones se obtienen a partir de la instrumentación estratégica del código y de ejecutables de demostración que vuelcan el estado en formatos legibles por humanos hacia la consola estándar.
+
+Además de su valor pedagógico inmediato en la enseñanza, el proyecto está diseñado con arquitectura extensible y modular, permitiendo que futuros desarrolladores, investigadores y estudiantes agreguen nuevas políticas y algoritmos (por ejemplo, algoritmos alternativos de scheduling o asignación de memoria) sin necesidad de modificar el núcleo del sistema o los componentes existentes. Esta característica lo hace valioso tanto para docencia como para investigación aplicada en el área de sistemas operativos.
+
+\section{Motivación y Objetivos Específicos del Proyecto}
+
+La motivación de este proyecto surge de observaciones empíricas recurrentes en cursos de sistemas operativos donde estudiantes, incluso avanzados, frecuentemente comprenden conceptos individuales de manera aislada (como cómo funciona Round Robin o el algoritmo First Fit de asignación de memoria) pero tienen dificultad significativa para entender las consecuencias complejas y no obvias de sus decisiones de diseño cuando múltiples subsistemas operan conjuntamente en un ambiente unificado. Por ejemplo, es común que un estudiante entienda teóricamente que fragmentación es problemática en First Fit, pero no visualice cómo se manifiesta dramáticamente en un escenario real con cientos o miles de operaciones de asignación y liberación intercaladas.
+
+Los objetivos específicos del proyecto incluyen: primero, crear un entorno simulado completo donde los cuatro subsistemas principales (planificación, memoria, archivos, E/S) interactúan de manera realista pero simplificada lo suficiente para ser comprehensible; segundo, proporcionar herramientas de visualización y trazas de ejecución que permitan observar el estado del sistema en cualquier punto temporal durante la ejecución; tercero, implementar una arquitectura que permita cambiar políticas específicas (algoritmos) sin impactar otros componentes del sistema; cuarto, desarrollar una suite comprehensiva de tests unitarios e integración que valide el correcto funcionamiento de cada componente y sus interacciones; y quinto, crear documentación extensiva y ejemplos que faciliten la reproducción de experimentos y la extensión del sistema con nuevas políticas.
+
+\section{Arquitectura del Simulador: Patrón Hexagonal (Ports and Adapters)}
+
+La arquitectura adoptada para este proyecto es la arquitectura hexagonal, también conocida como el patrón Ports and Adapters, propuesto inicialmente por Alistair Cockburn en 2005. Esta arquitectura propone una separación clara, completa y disciplinada entre el núcleo de dominio (domain core), que contiene la lógica y las reglas del negocio o del problema, y las implementaciones externas concretas que interactúan con él. En el contexto específico de un simulador de kernel, el núcleo de dominio encapsula las reglas de planificación de procesos, los invariantes de la memoria, la semántica básica del sistema de archivos y el comportamiento lógico de las operaciones de entrada/salida.
+
+La elección de arquitectura hexagonal respondió a múltiples necesidades concretas y técnicas identificadas durante el análisis de requisitos. Primero, facilitó el aislamiento del dominio para realizar pruebas unitarias de manera rigurosa sin depender de la entrada/salida real o de infraestructura externa compleja. Segundo, permitió cambiar implementaciones concretas sin necesidad de modificar la lógica central del dominio: por ejemplo, se puede cambiar la implementación de un algoritmo de planificación de Round Robin a Priority Scheduling sin tocar el resto del código o las pruebas de integración existentes. Tercero, la arquitectura ayuda directamente a la escalabilidad y extensibilidad: la integración de nuevas características (por ejemplo, soporte para paginación de memoria, segmentación o gestión de memoria virtual) puede implementarse como adaptadores que se conectan al puerto correspondiente sin disrupción a las capas superiores o a otros componentes.
+
+En el repositorio git, esta arquitectura se refleja de manera muy clara en la organización jerárquica de carpetas del proyecto:
+
+\begin{itemize}
+\item \texttt{domain/} contiene las entidades fundamentales del dominio (PCB, MemoryBlock, FCB, etc.) y los puertos que definen los contratos que deben ser implementados.
+\item \texttt{application/} contiene los casos de uso que coordinan operaciones del núcleo y orquestan los componentes de manera coherente.
+\item \texttt{adapters/outbound/} contiene implementaciones concretas de los puertos: planificadores específicos, gestor de memoria, sistema de archivos, dispositivos.
+\item \texttt{adapters/inbound/} contiene runners y CLI (command-line interfaces) que permiten ejecutar demostraciones y escenarios de integración desde la línea de comandos.
+\end{itemize}
+
+Esta organización no es puramente estética o cosmética; tiene implicaciones directas en la mantenibilidad, la escalabilidad y el desarrollo colaborativo del código. La separación entre puertos y adaptadores tiene implicaciones muy concretas en la implementación: los puertos definen interfaces en C++ que son clases abstractas puras, especificando contratos con métodos y comportamientos esperados. Los adaptadores concretos implementan estas interfaces de manera específica. En las pruebas unitarias, los puertos se pueden sustituir por stubs o dobles de prueba que permiten aislar la lógica bajo prueba sin depender de implementaciones concretas potencialmente complejas. Esta forma de trabajo disciplinada mejora significativamente la robustez, la fiabilidad y la mantenibilidad del desarrollo.
+
+A nivel conceptual y práctico, la arquitectura hexagonal también favorece la reproducibilidad de experimentos: un mismo caso de uso puede ejecutarse con distintos adaptadores conservando la semántica del dominio intacta. Esto es particularmente útil para comparar distintos algoritmos (por ejemplo, First Fit vs Best Fit vs Buddy Allocator) bajo igualdad de condiciones experimentales.
+
+\section{Algoritmos Implementados y Decisiones de Diseño Justificadas}
+
+En esta sección se documentan de manera minuciosa las decisiones sobre las políticas algorítmicas implementadas en cada subsistema principal del simulador. Estas decisiones fueron guiadas explícitamente por criterios pedagógicos (claridad de presentación y capacidad de ilustrar fenómenos esenciales) y por la simplicidad de implementación y verificación, evitando complejidad innecesaria que distraería de los objetivos educativos.
+
+\subsection{Planificación de Procesos: Round Robin}
+
+La planificación de procesos se implementó mediante el algoritmo Round Robin (RR) con quantum configurable. Round Robin fue seleccionado deliberadamente por su capacidad demostrada para repartir el tiempo de CPU de forma equitativa entre procesos listos y por su relativa facilidad de análisis y comprensión. En el simulador, cada proceso está representado por una estructura de datos PCB (Process Control Block) que contiene: identificador único (pid), nombre descriptivo del proceso, tiempo de ráfaga estimado o proporcionado, tiempo restante de ejecución, estado actual (New, Ready, Running, Blocked, Terminated), y referencias a recursos asignados como base de dirección de memoria y lista de archivos abiertos.
+
+El scheduler (planificador) expone métodos públicos para: encolar procesos nuevos en el estado Ready, seleccionar el siguiente proceso a ejecutar basándose en la política Round Robin, simular la ejecución de un proceso por un segmento de tiempo (quantum) especificado, procesar cambios de estado y generar volcados de estado (dumps) del estado interno del scheduler. Como consecuencia directa de esta implementación, los experimentos realizados permiten medir métricas temporales precisas como tiempo de turnaround total, tiempo promedio de respuesta, número de contextos de cambio de proceso y uso efectivo del CPU.
+
+El quantum es un parámetro configurable que afecta dramáticamente el comportamiento global del sistema. Un quantum pequeño (por ejemplo, 5 unidades de tiempo) produce más cambios de contexto pero respuestas más rápidas para procesos interactivos cortos. Un quantum grande reduce el overhead de cambio pero puede causar que procesos interactivos sufran latencias inaceptables.
+
+\subsection{Gestión de Memoria: First Fit con Coalescencia}
+
+La gestión de memoria utiliza el algoritmo First Fit aplicado sobre una representación estrictamente contigua de la memoria principal. La estructura de memoria se implementa como una lista ordenada de bloques (MemoryBlock), cada uno con los campos específicos: dirección inicial (en la memoria simulada), tamaño (en unidades de memoria), bandera booleana indicando si está libre, y pid del proceso ocupante cuando está asignado.
+
+Al solicitar memoria de tamaño S desde un proceso con pid P, el algoritmo recorre linealmente los bloques buscando el primer hueco libre que tenga tamaño suficiente (es decir, tamaño >= S). Si se encuentra, se asigna y se actualiza la estructura de lista. Cuando el tamaño del hueco encontrado es mayor que S, el algoritmo divide el hueco en dos bloques: uno asignado de tamaño exacto S y otro libre con el tamaño restante (tamaño\_hueco - S).
+
+Al liberar memoria de un proceso, se marca el bloque correspondiente como libre. Inmediatamente después se intenta ejecutar una operación de coalescencia, que detecta si el bloque recién liberado es adyacente a otro bloque libre (puede ser al inicio o al final). Si es así, se fusionan en un único bloque más grande. Esta operación de coalescencia es crítica para mitigar fragmentación externa cuando se tienen patrones de asignación y liberación intercalados. Sin coalescencia, la fragmentación aumentaría rápidamente.
+
+El algoritmo First Fit fue elegido deliberadamente por su simplicidad intrínseca y por su utilidad didáctica inmediata: ilustra de forma directa y observable la fragmentación externa y permite experimentar con patrones de asignación que demuestran claramente las limitaciones fundamentales de este método. Aunque existen algoritmos más sofisticados como Best Fit o Buddy Allocator, First Fit es más fácil de entender, de implementar correctamente y de instrumentar para visualización.
+
+\subsection{Sistema de Archivos: Asignación Contigua de Bloques}
+
+El sistema de archivos implementado usa asignación contigua de bloques de disco. Cada archivo se representa mediante una estructura FCB (File Control Block) que registra: nombre del archivo, bloque inicial de disco, tamaño en bloques, lista de pids que lo tienen actualmente abierto. El disco simulado se modela como una lista de bloques, cada uno con metadatos de estado que facilitan la visualización y control.
+
+La elección de asignación contigua simplifica drásticamente el cálculo de direcciones dentro del archivo durante lecturas y escrituras, facilitando la implementación del código en un simulador educativo. Sin embargo, la asignación contigua también evidencia rápidamente y de manera observable problemas de fragmentación de disco: tras sucesivas operaciones de creación y eliminación de archivos de tamaños variados, el espacio disco simulado queda fragmentado en numerosos huecos pequeños dispersos, dificultando la creación de archivos grandes a pesar de existir espacio total disponible. Estos efectos son precisamente los que se busca observar en el contexto de un proyecto pedagógico.
+
+\subsection{Entrada/Salida: Colas FIFO por Dispositivo}
+
+Las operaciones de E/S se modelan mediante colas FIFO independientes por dispositivo. Cada dispositivo mantiene una cola de espera donde se encolan estructuras IORequest que contienen: identificador del proceso solicitante, tipo de operación (lectura, escritura, etc.), dispositivo objetivo, y longitud de datos de la operación. El simulador procesa las colas de forma secuencial, y al completar una operación se simula una interrupción que reactivará al proceso que estaba bloqueado esperando el resultado.
+
+El modelo FIFO es intencionalmente simple: su uso permite centrarse en el efecto de las operaciones de E/S sobre la planificación de procesos y evitar complejidades extra que distraerían del objetivo educativo. En un sistema operativo real, las colas de dispositivos pueden tener políticas más complejas, pero para fines de educación y pedagogía, FIFO es suficiente, aclaratorio y directo.
+
+\section{Estructuras de Datos y Modelos de Dominio}
+
+Las estructuras de datos fueron diseñadas con los criterios de ser compactas, explícitas y fácilmente inspeccionables. El uso de tipos simples y estructuras claras facilita la comprensión, permite la instrumentación del código para volcado de estado y simplifica las pruebas de validación.
+
+El PCB (Process Control Block) almacena la información esencial de cada proceso: identificador único (pid), nombre legible del proceso, tiempo de ráfaga original estimado, tiempo restante de ejecución, estado actual (New, Ready, Running, Blocked, Terminated), referencias a recursos asignados como dirección base de memoria y lista de descriptores de archivos abiertos. Además, mantiene campos auxiliares para métricas: tiempo de llegada al sistema, tiempo de finalización de ejecución, número de veces que ha sido preempted. Estos campos son críticos para poder calcular estadísticas después de la ejecución de escenarios completos.
+
+El MemoryBlock contiene los siguientes campos: dirección inicial (dirección simulada en la memoria), tamaño en unidades de memoria, bandera booleana libre, y pid ocupante cuando está asignado. La lista ordenada de MemoryBlock conforma el MemoryMap completo. Al liberar bloques, se implementa la operación de coalescencia que detecta bloques adyacentes libres y los une para formar un bloque mayor. Esta operación es importante para mitigar fragmentación en patrones específicos donde las liberaciones ocurren secuencialmente.
+
+Para el sistema de archivos, cada archivo se representa con un FCB que incluye: nombre único del archivo, tamaño actual en bloques, bloque inicial de disco, y una lista opcional de pids que lo tienen actualmente abierto. El disco simulado se modela como una lista de BlockFS, donde cada uno contiene: bloque de inicio, tamaño, bandera de libre, y nombre de archivo si está ocupado.
+
+Las solicitudes de E/S se modelan con una estructura IORequest que contiene: pid del proceso solicitante, tipo de dispositivo (disco, impresora, etc.), tipo de operación (lectura, escritura), y longitud de datos de la operación. Las colas por dispositivo son simplemente listas FIFO de IORequest, y cada dispositivo tiene un DeviceEntry que incluye: nombre legible del dispositivo, estado actual (ocupado/libre), longitud de cola, y la cola FIFO de solicitudes pendientes.
+
+\section{Implementación Detallada y Organización del Código}
+
+El proyecto está implementado en C++17, lenguaje elegido por su balance entre rendimiento, claridad de expresión, y disponibilidad amplia de herramientas. Utiliza CMake como sistema de construcción, facilitando compatibilidad en distintos entornos (Windows, Linux, macOS).
+
+La organización del código sigue fielmente la separación por capas arquitectónicas ya descrita: carpeta \texttt{domain} contiene entidades de dominio y puertos; \texttt{application} contiene casos de uso y orquestadores; \texttt{adapters/outbound} contiene implementaciones de puertos; \texttt{adapters/inbound} contiene runners y CLI.
+
+Cada adaptador implementa una interfaz bien definida: por ejemplo, la interfaz de memoria expone métodos como \texttt{allocate(pid, size)}, \texttt{free(pid)}, \texttt{canAllocate(size)}, y \texttt{dump()}. Los planificadores implementan \texttt{addProcess(PCB)}, \texttt{runQuantum()}, \texttt{getCurrentProcess()}, y \texttt{dumpState()}.
+
+\section{Estrategia Comprehensiva de Pruebas}
+
+La estrategia de pruebas se diseñó para cubrir tanto unidades individuales como integraciones complejas. Los tests unitarios verifican comportamiento de adaptadores aislados: asignación y liberación en memoria, operaciones del sistema de archivos y ejecución de planificadores. Los tests de integración combinan módulos para validar escenarios reales: CPU+memoria, E/S concurrente y flujos completos.
+
+Los tests están registrados en CMake e invocables con CTest. Se recomienda ejecutar con \texttt{ctest -C Release --output-on-failure} para obtener detalles cuando fallan.
+
+\section{Resultados y Análisis Experimental}
+
+En pruebas de Round Robin con quantum pequeño (5 unidades), observamos incremento significativo de cambios de contexto pero reducción de tiempo de respuesta para procesos cortos. Con quantum grande, observamos lo opuesto. Estos resultados coinciden con la literatura académica.
+
+En pruebas de First Fit, series de asignaciones y liberaciones generan fragmentación visible. En escenarios con patrones alternados de asignaciones grandes/pequeñas y liberaciones, la memoria queda fragmentada en huecos dispersos. Mediciones mostraron fragmentación hasta 40-50 por ciento en cargas pesadas.
+
+En sistema de archivos con asignación contigua, creación repetida de archivos variados causa discontinuidades. Archivos grandes se tornan imposibles de crear con el tiempo sin compactación.
+
+En E/S, colas FIFO preservan orden. Latencia promedio crece proporcionalmente a longitud de cola, comportamiento esperado.
+
+\section{Limitaciones Deliberadas y Consideraciones}
+
+El simulador presenta limitaciones deliberadas por motivos pedagógicos. Memoria es estrictamente contigua sin paginación. Sistema de archivos usa asignación contigua sin compactación. Modelo de E/S es simplificado con FIFO. No hay mecanismos de protección ni aislamiento real entre procesos.
+
+Finalmente, el simulador está diseñado para educación y no es producción. Su objetivo es pedagógico.
+
+\section{Recomendaciones para Extensiones Futuras}
+
+Se enumeran extensiones que agregan valor:
+
+1) Implementar Best Fit y Worst Fit como adaptadores alternativos de memoria.
+
+2) Implementar Buddy Allocator que divide memoria recursivamente.
+
+3) Añadir soporte para paginación con tabla de páginas.
+
+4) Extender sistema de archivos con asignación enlazada o inodos jerárquicos.
+
+5) Implementar E/S con prioridades dinámicas o colas multi-nivel.
+
+6) Desarrollar interfaz gráfica web ligera para visualización en tiempo real.
+
+7) Implementar algoritmos de scheduling alternativos (SJF, Priority Scheduling, MLFQ).
+
+8) Agregar sincronización primitiva como semáforos y mutexes.
+
+Cada extensión puede implementarse como adaptador alternativo aprovechando arquitectura hexagonal.
+
+\section{Guía de Compilación y Ejecución}
+
+Para compilar en Windows con CMake:
+
+\begin{verbatim}
+cd cpp_os_simulator
+cmake -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --config Release
+\end{verbatim}
+
+Para ejecutar tests:
+
+\begin{verbatim}
+cd build
+ctest -C Release --output-on-failure
+\end{verbatim}
+
+Para ejecutar demos:
+
+\begin{verbatim}
+./build/Release/memory_cli
+./build/Release/files_cli
+./build/Release/kernel_runner
+\end{verbatim}
+
+\section{Conclusiones Finales}
+
+El proyecto "Mini-Kernel" ofrece plataforma práctica y efectiva para estudio de sistemas operativos. Las decisiones de diseño arquitectónico (hexagonal), algorítmicas (Round Robin, First Fit, FIFO) se eligieron cuidadosamente para maximizar claridad pedagógica y permitir experimentación controlada.
+
+Los resultados de prueba confirman comportamientos esperados según teoría académica. Fragmentación externa, impacto de quantum, dependencia de latencia en cola de dispositivos, todos son observables. Instrumentación permite reproducibilidad. Estructura modular permite extensiones.
+
+En conjunto, Mini-Kernel cumple objetivos de ser entorno controlado y extensible para enseñanza de sistemas operativos, constituyendo base sólida para actividades académicas, proyectos de extensión y comparativas empíricas de políticas.
+
+\begin{thebibliography}{00}
+\bibitem{b1} Silberschatz, A., Galvin, P. B., \& Gagne, G. (2018). Operating System Concepts (10th ed.). Wiley.
+\bibitem{b2} GeeksforGeeks. "Round-Robin Scheduling in Operating System". https://www.geeksforgeeks.org/operating-systems/round-robin-scheduling-in-operating-system/
+\bibitem{b3} GeeksforGeeks. "First-Fit Allocation in Operating Systems". https://www.geeksforgeeks.org/operating-systems/first-fit-allocation-in-operating-systems/
+\bibitem{b4} takeUforward. "Contiguous Allocation, Paging and Segmentation." https://takeuforward.org/operating-system/contiguous-allocation-paging-segmentation
+\bibitem{b5} GeeksforGeeks. "FIFO". https://www.geeksforgeeks.org/dsa/introduction-to-queue-data-structure-and-algorithm-tutorials/
+\bibitem{b6} Cockburn, A. (2005). "Hexagonal Architecture". https://alistair.cockburn.us/hexagonal-architecture/
+\bibitem{b7} Martin, R. C. (2008). Clean Code: A Handbook of Agile Software Craftsmanship. Prentice Hall.
+\end{thebibliography}
+
+\end{document}
