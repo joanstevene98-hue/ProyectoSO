@@ -14,8 +14,7 @@ Esta guía explica cómo compilar el proyecto C++ (CMake) en Windows y cómo eje
 
 # Guía completa: compilar y ejecutar el proyecto + tests
 
-Objetivo
-- Compilar el proyecto `cpp_os_simulator` en Windows.
+
 - Ejecutar todos los tests con `ctest` y ejecutar tests individualmente.
 
 Resumen rápido (comandos clave)
